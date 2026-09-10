@@ -118,6 +118,12 @@
   .icon-btn{width:34px;height:34px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;}
   .icon-btn:hover{color:var(--ink);border-color:var(--border-strong);}
   .date-chip{font-family:"IBM Plex Mono";font-size:11.5px;color:var(--secondary);border:1px solid var(--border);border-radius:99px;padding:6px 12px;background:var(--surface);white-space:nowrap;}
+  #refreshBtn{width:auto;gap:6px;padding:0 12px;font-size:12.5px;font-weight:600;}
+  #refreshBtn:disabled{opacity:0.6;cursor:default;}
+  #refreshBtn.is-loading #refreshIcon{animation:aria-spin 0.85s linear infinite;}
+  #refreshBtn.is-error{border-color:var(--critical);color:var(--critical);}
+  @keyframes aria-spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+  #refreshStatusChip.is-error{color:var(--critical);border-color:var(--critical);}
 
   .content{padding:22px 28px 60px;max-width:1320px;width:100%;margin:0 auto;}
   .view{display:none;}
@@ -317,7 +323,11 @@
       </button>
       <div class="topbar-spacer"></div>
       <div class="topbar-right">
-        <span class="date-chip tnum">Data as of 05–09 Sep 2026</span>
+        <span class="date-chip tnum" id="refreshStatusChip">Data as of 05–09 Sep 2026</span>
+        <button class="icon-btn" id="refreshBtn" aria-label="Refresh live data from SharePoint" title="Pull latest data from SharePoint">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" id="refreshIcon"><path d="M13.65 4.35A6 6 0 1 0 14 8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M13.9 1.5v3.3h-3.3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span id="refreshBtnLabel">Refresh</span>
+        </button>
         <button class="icon-btn" id="themeBtn" aria-label="Toggle theme" title="Toggle light / dark">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1.5v1.6M8 12.9v1.6M2.6 8H1M15 8h-1.6M3.5 3.5l1.1 1.1M11.4 11.4l1.1 1.1M12.5 3.5l-1.1 1.1M4.6 11.4l-1.1 1.1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="8" cy="8" r="3.3" stroke="currentColor" stroke-width="1.4"/></svg>
         </button>
@@ -1140,42 +1150,60 @@
       aosBodyRows.innerHTML = html;
     }
 
-    var aosTotal = AOS_DATA.length;
-    var aosCounts = [0,0,0];
-    var aosPriorityCount = 0, aosPriorityValue = 0;
-    AOS_DATA.forEach(function(r){ aosCounts[r[9]]++; if (r[10]){ aosPriorityCount++; aosPriorityValue += r[6]; } });
-
-    var aosKpiDefs = [
-      {label:'TOTAL BOOKED', value:aosTotal, sub:'all sale categories', color:'var(--ink)', filter:function(){ aosState.stage='all'; aosState.priorityOnly=false; } },
-      {label:'NOT PREPARED', value:aosCounts[0], sub:(Math.round(1000*aosCounts[0]/aosTotal)/10)+'% of bookings', color:'var(--muted)', filter:function(){ aosState.stage='0'; aosState.priorityOnly=false; } },
-      {label:'PENDING MGT SIGNATURE', value:aosCounts[1], sub:(Math.round(1000*aosCounts[1]/aosTotal)/10)+'% of bookings', color:'var(--warning)', filter:function(){ aosState.stage='1'; aosState.priorityOnly=false; } },
-      {label:'EXECUTED', value:aosCounts[2], sub:(Math.round(1000*aosCounts[2]/aosTotal)/10)+'% of bookings', color:'var(--good)', filter:function(){ aosState.stage='2'; aosState.priorityOnly=false; } },
-      {label:'NEEDS ATTENTION', value:aosPriorityCount, sub:aosFmtInr(aosPriorityValue)+' already received', color:'var(--critical)', filter:function(){ aosState.stage='all'; aosState.priorityOnly=true; } }
-    ];
-
-    var aosKpiRow = document.getElementById('aosKpiRow');
     var aosKpiTiles = [];
-    aosKpiRow.innerHTML = aosKpiDefs.map(function(d,i){
-      return '<div class="kpi clickable" data-i="'+i+'"><div class="label"><i class="dotlabel" style="background:'+d.color+'"></i>'+d.label+'</div><div class="value tnum" style="color:'+d.color+'">'+d.value+'</div><div class="sub">'+d.sub+'</div></div>';
-    }).join('');
-    aosKpiRow.querySelectorAll('.kpi').forEach(function(elx,i){
-      aosKpiTiles.push({el:elx, def:aosKpiDefs[i]});
-      elx.addEventListener('click', function(){
-        aosKpiTiles.forEach(function(t){ t.el.classList.remove('active'); });
-        elx.classList.add('active');
-        aosKpiDefs[i].filter();
-        aosStageSeg.querySelectorAll('button').forEach(function(b){ b.classList.toggle('active', b.dataset.v===aosState.stage); });
-        aosRender();
+
+    function aosRecomputeAndRender(){
+      var aosTotal = AOS_DATA.length;
+      var aosCounts = [0,0,0];
+      var aosPriorityCount = 0, aosPriorityValue = 0;
+      AOS_DATA.forEach(function(r){ aosCounts[r[9]]++; if (r[10]){ aosPriorityCount++; aosPriorityValue += r[6]; } });
+
+      var aosKpiDefs = [
+        {label:'TOTAL BOOKED', value:aosTotal, sub:'all sale categories', color:'var(--ink)', filter:function(){ aosState.stage='all'; aosState.priorityOnly=false; } },
+        {label:'NOT PREPARED', value:aosCounts[0], sub:(Math.round(1000*aosCounts[0]/aosTotal)/10)+'% of bookings', color:'var(--muted)', filter:function(){ aosState.stage='0'; aosState.priorityOnly=false; } },
+        {label:'PENDING MGT SIGNATURE', value:aosCounts[1], sub:(Math.round(1000*aosCounts[1]/aosTotal)/10)+'% of bookings', color:'var(--warning)', filter:function(){ aosState.stage='1'; aosState.priorityOnly=false; } },
+        {label:'EXECUTED', value:aosCounts[2], sub:(Math.round(1000*aosCounts[2]/aosTotal)/10)+'% of bookings', color:'var(--good)', filter:function(){ aosState.stage='2'; aosState.priorityOnly=false; } },
+        {label:'NEEDS ATTENTION', value:aosPriorityCount, sub:aosFmtInr(aosPriorityValue)+' already received', color:'var(--critical)', filter:function(){ aosState.stage='all'; aosState.priorityOnly=true; } }
+      ];
+
+      var aosKpiRow = document.getElementById('aosKpiRow');
+      aosKpiTiles = [];
+      aosKpiRow.innerHTML = aosKpiDefs.map(function(d,i){
+        return '<div class="kpi clickable" data-i="'+i+'"><div class="label"><i class="dotlabel" style="background:'+d.color+'"></i>'+d.label+'</div><div class="value tnum" style="color:'+d.color+'">'+d.value+'</div><div class="sub">'+d.sub+'</div></div>';
+      }).join('');
+      aosKpiRow.querySelectorAll('.kpi').forEach(function(elx,i){
+        aosKpiTiles.push({el:elx, def:aosKpiDefs[i]});
+        elx.addEventListener('click', function(){
+          aosKpiTiles.forEach(function(t){ t.el.classList.remove('active'); });
+          elx.classList.add('active');
+          aosKpiDefs[i].filter();
+          aosStageSeg.querySelectorAll('button').forEach(function(b){ b.classList.toggle('active', b.dataset.v===aosState.stage); });
+          aosRender();
+        });
       });
-    });
 
-    var aosFunnelColors = ['var(--muted)','var(--warning)','var(--good)'];
-    document.getElementById('aosFunnelBar').innerHTML = [0,1,2].map(function(i){
-      var pct = (100*aosCounts[i]/aosTotal).toFixed(1);
-      return '<span style="width:'+pct+'%;background:'+aosFunnelColors[i]+'" title="'+AOS_STAGE_LABEL[i]+': '+aosCounts[i]+'"></span>';
-    }).join('');
+      var aosFunnelColors = ['var(--muted)','var(--warning)','var(--good)'];
+      document.getElementById('aosFunnelBar').innerHTML = [0,1,2].map(function(i){
+        var pct = (100*aosCounts[i]/aosTotal).toFixed(1);
+        return '<span style="width:'+pct+'%;background:'+aosFunnelColors[i]+'" title="'+AOS_STAGE_LABEL[i]+': '+aosCounts[i]+'"></span>';
+      }).join('');
 
-    aosRender();
+      aosRender();
+    }
+
+    aosRecomputeAndRender();
+
+    window.__ariaRefresh = window.__ariaRefresh || {};
+    window.__ariaRefresh.setAosData = function(newData){
+      AOS_DATA = newData;
+      aosCats = Array.from(new Set(AOS_DATA.map(function(r){return r[2];}))).sort();
+      aosBlocksList = Array.from(new Set(AOS_DATA.map(function(r){return r[0];}))).sort();
+      aosCatSel.innerHTML = '<option value="all">All categories</option>' + aosCats.map(function(c){return '<option value="'+c+'">'+c+'</option>';}).join('');
+      aosCatSel.value = 'all'; aosState.cat = 'all';
+      aosBlkSel.innerHTML = '<option value="all">All blocks</option>' + aosBlocksList.map(function(b){return '<option value="'+b+'">Block '+b+'</option>';}).join('');
+      aosBlkSel.value = 'all'; aosState.block = 'all';
+      aosRecomputeAndRender();
+    };
   })();
 
 
@@ -1478,45 +1506,131 @@
       flowBodyRows.innerHTML = html;
     }
 
-    var flowTotalInflow = 0, flowTotalOutflow = 0, flowDeficitMonths = 0, flowActualInflow = 0, flowActualOutflow = 0;
-    FLOW_DATA.forEach(function(r){
-      flowTotalInflow += r[5]; flowTotalOutflow += r[8];
-      if (r[9] < 0) flowDeficitMonths++;
-      if (r[11]){ flowActualInflow += r[5]; flowActualOutflow += r[8]; }
-    });
-    var flowCurrentClosing = FLOW_DATA[7][9]; // Sep-26
-
-    var flowKpiDefs = [
-      {label:'TOTAL INFLOW (MODELLED)', value:flowFmtCr(flowTotalInflow), sub:'Feb-26 → Dec-30', color:'var(--good)', filter:function(){ flowState.type='all'; flowState.deficitOnly=false; } },
-      {label:'TOTAL OUTFLOW (MODELLED)', value:flowFmtCr(flowTotalOutflow), sub:'Feb-26 → Dec-30', color:'var(--accent-eng)', filter:function(){ flowState.type='all'; flowState.deficitOnly=false; } },
-      {label:'CURRENT POSITION', value:flowFmtCr(flowCurrentClosing), sub:'Closing balance, Sep-26', color:'var(--ink)', filter:function(){ flowState.type='all'; flowState.deficitOnly=false; } },
-      {label:'ACTUAL TO DATE', value:flowFmtCr(flowActualInflow-flowActualOutflow), sub:'Net, Feb–Aug 2026', color:'var(--good)', filter:function(){ flowState.type='1'; flowState.deficitOnly=false; } },
-      {label:'DEFICIT MONTHS', value:flowDeficitMonths+' / 59', sub:'closing balance negative', color:'var(--critical)', filter:function(){ flowState.type='all'; flowState.deficitOnly=true; } }
-    ];
-
-    var flowKpiRow = document.getElementById('flowKpiRow');
     var flowKpiTiles = [];
-    flowKpiRow.innerHTML = flowKpiDefs.map(function(d,i){
-      return '<div class="kpi clickable" data-i="'+i+'"><div class="label"><i class="dotlabel" style="background:'+d.color+'"></i>'+d.label+'</div><div class="value tnum" style="color:'+d.color+'">'+d.value+'</div><div class="sub">'+d.sub+'</div></div>';
-    }).join('');
-    flowKpiRow.querySelectorAll('.kpi').forEach(function(el,i){
-      flowKpiTiles.push({el:el, def:flowKpiDefs[i]});
-      el.addEventListener('click', function(){
-        flowKpiTiles.forEach(function(t){ t.el.classList.remove('active'); });
-        el.classList.add('active');
-        flowKpiDefs[i].filter();
-        flowTypeSeg.querySelectorAll('button').forEach(function(b){ b.classList.toggle('active', b.dataset.v===flowState.type); });
-        flowRender();
+
+    function flowRecomputeAndRender(){
+      var monthCount = FLOW_DATA.length;
+      var flowTotalInflow = 0, flowTotalOutflow = 0, flowDeficitMonths = 0, flowActualInflow = 0, flowActualOutflow = 0;
+      var lastActualIdx = 0;
+      FLOW_DATA.forEach(function(r,i){
+        flowTotalInflow += r[5]; flowTotalOutflow += r[8];
+        if (r[9] < 0) flowDeficitMonths++;
+        if (r[11]){ flowActualInflow += r[5]; flowActualOutflow += r[8]; lastActualIdx = i; }
       });
-    });
+      var flowCurrentClosing = FLOW_DATA[lastActualIdx][9];
+      var flowCurrentLabel = FLOW_DATA[lastActualIdx][0];
 
-    var flowSurplusCount = 59 - flowDeficitMonths;
-    document.getElementById('flowFunnelBar').innerHTML =
-      '<span style="width:'+(100*flowSurplusCount/59).toFixed(1)+'%;background:var(--good)" title="Surplus months: '+flowSurplusCount+'"></span>'+
-      '<span style="width:'+(100*flowDeficitMonths/59).toFixed(1)+'%;background:var(--critical)" title="Deficit months: '+flowDeficitMonths+'"></span>';
+      var flowKpiDefs = [
+        {label:'TOTAL INFLOW (MODELLED)', value:flowFmtCr(flowTotalInflow), sub:'Feb-26 → Dec-30', color:'var(--good)', filter:function(){ flowState.type='all'; flowState.deficitOnly=false; } },
+        {label:'TOTAL OUTFLOW (MODELLED)', value:flowFmtCr(flowTotalOutflow), sub:'Feb-26 → Dec-30', color:'var(--accent-eng)', filter:function(){ flowState.type='all'; flowState.deficitOnly=false; } },
+        {label:'CURRENT POSITION', value:flowFmtCr(flowCurrentClosing), sub:'Closing balance, '+flowCurrentLabel, color:'var(--ink)', filter:function(){ flowState.type='all'; flowState.deficitOnly=false; } },
+        {label:'ACTUAL TO DATE', value:flowFmtCr(flowActualInflow-flowActualOutflow), sub:'Net, actual months', color:'var(--good)', filter:function(){ flowState.type='1'; flowState.deficitOnly=false; } },
+        {label:'DEFICIT MONTHS', value:flowDeficitMonths+' / '+monthCount, sub:'closing balance negative', color:'var(--critical)', filter:function(){ flowState.type='all'; flowState.deficitOnly=true; } }
+      ];
 
-    flowRender();
+      var flowKpiRow = document.getElementById('flowKpiRow');
+      flowKpiTiles = [];
+      flowKpiRow.innerHTML = flowKpiDefs.map(function(d,i){
+        return '<div class="kpi clickable" data-i="'+i+'"><div class="label"><i class="dotlabel" style="background:'+d.color+'"></i>'+d.label+'</div><div class="value tnum" style="color:'+d.color+'">'+d.value+'</div><div class="sub">'+d.sub+'</div></div>';
+      }).join('');
+      flowKpiRow.querySelectorAll('.kpi').forEach(function(el,i){
+        flowKpiTiles.push({el:el, def:flowKpiDefs[i]});
+        el.addEventListener('click', function(){
+          flowKpiTiles.forEach(function(t){ t.el.classList.remove('active'); });
+          el.classList.add('active');
+          flowKpiDefs[i].filter();
+          flowTypeSeg.querySelectorAll('button').forEach(function(b){ b.classList.toggle('active', b.dataset.v===flowState.type); });
+          flowRender();
+        });
+      });
+
+      var flowSurplusCount = monthCount - flowDeficitMonths;
+      document.getElementById('flowFunnelBar').innerHTML =
+        '<span style="width:'+(100*flowSurplusCount/monthCount).toFixed(1)+'%;background:var(--good)" title="Surplus months: '+flowSurplusCount+'"></span>'+
+        '<span style="width:'+(100*flowDeficitMonths/monthCount).toFixed(1)+'%;background:var(--critical)" title="Deficit months: '+flowDeficitMonths+'"></span>';
+
+      flowRender();
+    }
+
+    flowRecomputeAndRender();
+
+    window.__ariaRefresh = window.__ariaRefresh || {};
+    window.__ariaRefresh.setFlowData = function(newData){
+      FLOW_DATA = newData;
+      flowYears = Array.from(new Set(FLOW_DATA.map(function(r){return '20'+r[0].split('-')[1];}))).sort();
+      flowYearSel.innerHTML = '<option value="all">All years</option>' + flowYears.map(function(y){return '<option value="'+y+'">'+y+'</option>';}).join('');
+      flowYearSel.value = 'all'; flowState.year = 'all';
+      flowRecomputeAndRender();
+    };
   })();
 
 })();
+</script>
+<script>
+  /* ================= LIVE REFRESH (SharePoint via /api/refresh-data) ================= */
+  (function(){
+    var btn = document.getElementById('refreshBtn');
+    var chip = document.getElementById('refreshStatusChip');
+    if (!btn || !chip) return;
+
+    function fmtNow(){
+      var d = new Date();
+      var dd = String(d.getDate()).padStart(2,'0');
+      var mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()];
+      var hh = String(d.getHours()).padStart(2,'0');
+      var mm = String(d.getMinutes()).padStart(2,'0');
+      return dd+' '+mon+' '+d.getFullYear()+', '+hh+':'+mm;
+    }
+
+    var savedChip = chip.textContent;
+    try {
+      var lastGood = localStorage.getItem('ariaRefreshLastGood');
+      if (lastGood) chip.textContent = 'Live data as of ' + lastGood;
+    } catch(e){}
+
+    btn.addEventListener('click', function(){
+      if (btn.classList.contains('is-loading')) return;
+      btn.classList.add('is-loading');
+      btn.classList.remove('is-error');
+      btn.disabled = true;
+      var label = document.getElementById('refreshBtnLabel');
+      if (label) label.textContent = 'Refreshing…';
+
+      fetch('/api/refresh-data', { cache: 'no-store' })
+        .then(function(r){ return r.json().then(function(j){ return { ok: r.ok, body: j }; }); })
+        .then(function(res){
+          if (!res.ok || !res.body || res.body.ok === false) {
+            throw new Error((res.body && (res.body.error || res.body.code)) || 'Refresh failed');
+          }
+          var data = res.body;
+          if (window.__ariaRefresh) {
+            if (Array.isArray(data.aosData) && window.__ariaRefresh.setAosData) window.__ariaRefresh.setAosData(data.aosData);
+            if (Array.isArray(data.flowData) && window.__ariaRefresh.setFlowData) window.__ariaRefresh.setFlowData(data.flowData);
+          }
+          var stamp = fmtNow();
+          chip.textContent = 'Live data as of ' + stamp;
+          chip.classList.remove('is-error');
+          try { localStorage.setItem('ariaRefreshLastGood', stamp); } catch(e){}
+          if (label) label.textContent = 'Refresh';
+        })
+        .catch(function(err){
+          btn.classList.add('is-error');
+          chip.classList.add('is-error');
+          chip.textContent = 'Refresh failed — ' + (err && err.message ? err.message : 'check connection');
+          if (label) label.textContent = 'Refresh';
+          window.setTimeout(function(){
+            chip.classList.remove('is-error');
+            btn.classList.remove('is-error');
+            try {
+              var lastGood2 = localStorage.getItem('ariaRefreshLastGood');
+              chip.textContent = lastGood2 ? ('Live data as of ' + lastGood2) : savedChip;
+            } catch(e){ chip.textContent = savedChip; }
+          }, 6000);
+        })
+        .finally(function(){
+          btn.classList.remove('is-loading');
+          btn.disabled = false;
+        });
+    });
+  })();
 </script>
