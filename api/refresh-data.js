@@ -2,6 +2,7 @@
 // Microsoft Graph (client-credentials / app-only auth) and returns it in the
 // exact shape the dashboard's client-side JS expects, so the page can
 // re-render without a rebuild/redeploy.
+// redeploy trigger: env vars added
 //
 // Required Vercel environment variables:
 //   AZURE_TENANT_ID
