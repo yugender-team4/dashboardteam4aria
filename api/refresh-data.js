@@ -2,7 +2,6 @@
 // Microsoft Graph (client-credentials / app-only auth) and returns it in the
 // exact shape the dashboard's client-side JS expects, so the page can
 // re-render without a rebuild/redeploy.
-// redeploy trigger: env vars added
 //
 // Required Vercel environment variables:
 //   AZURE_TENANT_ID
@@ -13,7 +12,6 @@
 //   ARIA_INFLOW_ITEM_ID      e.g. CF15EAE3-0340-464B-9C59-B4EAAE6DAE1E  (Inflow workbook)
 
 const GRAPH = 'https://graph.microsoft.com/v1.0';
-
 async function getAccessToken() {
   const tenantId = process.env.AZURE_TENANT_ID;
   const clientId = process.env.AZURE_CLIENT_ID;
@@ -35,7 +33,6 @@ async function getAccessToken() {
   if (!resp.ok) throw httpError(502, 'auth_failed', json.error_description || JSON.stringify(json));
   return json.access_token;
 }
-
 function httpError(status, code, message) {
   const e = new Error(message);
   e.status = status;
@@ -58,9 +55,15 @@ function num(v) {
 }
 
 function str(v) {
-  return (v === null || v === undefined) ? '' : String(v).trim();
+  if (v === null || v === undefined) return '';
+  // Graph returns a numeric 0 (not '' or null) for blank cells in some
+  // text-ish columns (e.g. CP Name) depending on the cell's number format.
+  // None of the text fields we read (Block, Flat No, Category, Name,
+  // CP Name, Remarks, month labels) are ever legitimately "0", so treat a
+  // bare numeric zero as blank rather than showing the literal text "0".
+  if (typeof v === 'number' && v === 0) return '';
+  return String(v).trim();
 }
-
 // Excel serial date -> "05-Jun-26" (matches the format already baked into the dashboard)
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function fmtDate(cellValue, cellText) {
@@ -78,7 +81,6 @@ function fmtDate(cellValue, cellText) {
   const yy = String(d.getUTCFullYear()).slice(-2);
   return `${dd}-${mon}-${yy}`;
 }
-
 /*
  * AOS Tracker row derivation — reverse-engineered from the Statement sheet
  * and validated against all 811 previously-baked rows with zero mismatches:
@@ -110,7 +112,6 @@ const COL = {
   REMARKS: 36,      // AL
   REMARKS2: 37       // AM
 };
-
 function buildAosData(range) {
   const values = range.values || [];
   const texts = range.text || [];
@@ -148,7 +149,6 @@ function buildAosData(range) {
   }
   return out;
 }
-
 /*
  * Inflow & Outflow (FLOW_DATA) — read directly from the Inflow workbook's
  * own computed cells (Summary!A4:J62). Every figure here is Excel's own
@@ -167,10 +167,17 @@ function buildAosData(range) {
  */
 function buildFlowData(range) {
   const values = range.values || [];
+  const texts = range.text || [];
   const out = [];
   let idx = 0;
-  for (const row of values) {
-    const month = str(row[0]);
+  for (let r = 0; r < values.length; r++) {
+    const row = values[r];
+    const txtRow = texts[r] || [];
+    // The Month column is a real date cell formatted as "Mmm-yy" in Excel;
+    // range.values returns its raw serial number, so prefer the displayed
+    // text (range.text) and only fall back to the raw value if text is
+    // unavailable for some reason.
+    const month = str(txtRow[0]) || str(row[0]);
     if (!month) continue;
     const opening = num(row[1]) / 1e7;   // paise->Cr not needed; values are already ₹, convert to Cr
     const inflowExisting = num(row[2]) / 1e7;
@@ -194,7 +201,6 @@ function buildFlowData(range) {
 }
 
 function round2(n) { return Math.round(n * 100) / 100; }
-
 module.exports = async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   try {
