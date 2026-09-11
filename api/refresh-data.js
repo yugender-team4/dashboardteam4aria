@@ -170,6 +170,13 @@ function buildAosData(range) {
  *             a pure projection formula (Summary!J11 changes from
  *             "=F11-I11" to "=F11-G11") — a fixed structural fact about
  *             this workbook, not a moving "today" comparison.
+ *
+ * Column H ("Actual Outflow related to Budget") is fetched but, as of
+ * Sep-2026, is genuinely blank for every row in the live workbook — it
+ * never appears in any of the sheet's own Closing Balance formulas either.
+ * It's still read here (rather than silently dropped) so that the moment
+ * someone populates it in SharePoint, it starts flowing through without a
+ * code change.
  */
 function buildFlowData(range) {
   const values = range.values || [];
@@ -191,6 +198,7 @@ function buildFlowData(range) {
     const otherReceipts = num(row[4]) / 1e7;
     const totalInflow = num(row[5]) / 1e7;
     const budgetOutflow = num(row[6]) / 1e7;
+    const actualOutflowBudget = num(row[7]) / 1e7; // Column H — blank/0 today, see note above
     const otherThanBudget = num(row[8]) / 1e7;
     const closing = num(row[9]) / 1e7;
     const outflow = opening + totalInflow - closing;
@@ -199,7 +207,7 @@ function buildFlowData(range) {
     out.push([
       month, round2(opening), round2(inflowExisting), round2(inflowFuture), round2(otherReceipts),
       round2(totalInflow), round2(budgetOutflow), round2(otherThanBudget), round2(outflow),
-      round2(closing), round2(net), actual, idx
+      round2(closing), round2(net), actual, idx, round2(actualOutflowBudget)
     ]);
     idx++;
   }
