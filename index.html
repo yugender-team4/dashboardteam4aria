@@ -451,6 +451,14 @@
 
           <div id="crmReport-booking">
             <div class="kpi-row" id="crmBookingKpiRow"></div>
+            <div class="card">
+              <div class="card-head"><div><h2>Tower-wise bookings</h2><div class="hint">Stacked by sale category &middot; hover a segment for detail</div></div></div>
+              <div class="card-body"><svg class="chart-svg" id="crmBookingTowerChart" viewBox="0 0 900 300"></svg><div class="legend-inline" id="crmBookingChartLegend" style="margin-top:6px;"></div></div>
+            </div>
+            <div class="card">
+              <div class="card-head"><div><h2>Peak booking months</h2><div class="hint">Booking intensity by month &amp; year</div></div></div>
+              <div class="card-body tight"><div class="table-wrap" id="crmBookingMonthHeatmap"></div></div>
+            </div>
             <div class="card" style="margin-bottom:0;">
               <div class="filter-bar">
                 <div class="search-box">
@@ -475,6 +483,10 @@
 
           <div id="crmReport-collection" hidden>
             <div class="kpi-row" id="crmCollectionKpiRow"></div>
+            <div class="card">
+              <div class="card-head"><div><h2>Collection by tower</h2><div class="hint">TSC (AOS value), received and balance due, by block</div></div></div>
+              <div class="card-body tight"><div class="table-wrap"><table id="crmByTowerTable"></table></div></div>
+            </div>
             <div class="card" style="margin-bottom:0;">
               <div class="filter-bar">
                 <div class="search-box">
@@ -500,7 +512,11 @@
           <div id="crmReport-monthly" hidden>
             <div class="kpi-row" id="crmMonthlyKpiRow"></div>
             <div class="card">
-              <div class="card-head"><div><h2>Monthly collection</h2><div class="hint">Actual bank collections, month by month (from the Inflow &amp; Outflow model)</div></div></div>
+              <div class="card-head"><div><h2>Monthly collection trend</h2><div class="hint">Total collected per month &middot; actual months only</div></div></div>
+              <div class="card-body"><svg class="chart-svg" id="crmMonthlyChart" viewBox="0 0 900 260"></svg></div>
+            </div>
+            <div class="card">
+              <div class="card-head"><div><h2>Overall collection — month by month</h2><div class="hint">Actual bank collections, month by month (from the Inflow &amp; Outflow model)</div></div></div>
               <div class="card-body tight"><div class="table-wrap"><table id="crmMonthlyTable"></table></div></div>
             </div>
           </div>
@@ -511,6 +527,10 @@
               <div class="kpi"><div class="label">AMOUNT CALLED</div><div class="value tnum">₹481.99 Cr</div><div class="sub">invoiced to date</div></div>
               <div class="kpi"><div class="label">DUE &amp; OUTSTANDING</div><div class="value tnum">₹120.26 Cr</div><div class="sub">of amount called</div></div>
               <div class="kpi"><div class="label">FUTURE RECEIVABLE</div><div class="value tnum">₹568.68 Cr</div><div class="sub">over life of project</div></div>
+            </div>
+            <div class="card">
+              <div class="card-head"><div><h2>Collection stage heatmap</h2><div class="hint">Customer count by tower &amp; % of unit value collected (deciles) &middot; darker = more customers</div></div></div>
+              <div class="card-body tight"><div class="table-wrap" id="crmStageHeatmap"></div></div>
             </div>
             <div class="card">
               <div class="card-head"><div><h2>Bookings by category</h2><div class="hint">Present collection &amp; receivable, by category</div></div></div>
@@ -1316,6 +1336,21 @@
     }
 
     /* ---- CRM & Sales: Unit Booking Report / Unit Collection Report (share AOS_DATA) ---- */
+    var MONTH_ABBR = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    function parseAosDate(d){
+      var parts = (d||'').split('-');
+      if (parts.length !== 3) return null;
+      var mIdx = MONTH_ABBR.indexOf(parts[1]);
+      if (mIdx === -1) return null;
+      var yr = parseInt(parts[2],10);
+      yr = yr < 100 ? 2000+yr : yr;
+      return {month:mIdx, year:yr};
+    }
+    function crmHeatShade(v, maxV){
+      if (!v) return 'var(--surface-2)';
+      var alpha = 0.14 + (v/maxV)*0.72;
+      return 'rgba(31,143,90,'+alpha.toFixed(2)+')';
+    }
     var crmBookingState = { search:'', cat:'all', block:'all', sortKey:null, sortDir:1 };
     var crmCollectionState = { search:'', cat:'all', block:'all', sortKey:null, sortDir:1 };
 
@@ -1501,10 +1536,146 @@
       }
     }
 
+    function crmBookingChartsRender(){
+      var svg = document.getElementById('crmBookingTowerChart');
+      if (svg){
+        svg.innerHTML = '';
+        var byBlock = {};
+        aosBlocksList.forEach(function(b){ byBlock[b] = {}; aosCats.forEach(function(c){ byBlock[b][c]=0; }); });
+        AOS_DATA.forEach(function(r){ if (byBlock[r[0]]) byBlock[r[0]][r[2]] = (byBlock[r[0]][r[2]]||0)+1; });
+        var palette = ['var(--accent-crm)','var(--warning)','var(--good)','var(--accent-eng)','var(--critical)'];
+        var catColor = {}; aosCats.forEach(function(c,i){ catColor[c]=palette[i%palette.length]; });
+        var blocks = aosBlocksList.slice().sort(function(a,b){
+          var ta=0,tb=0; aosCats.forEach(function(c){ ta+=byBlock[a][c]; tb+=byBlock[b][c]; });
+          return tb-ta;
+        });
+        var totals = blocks.map(function(b){ var t=0; aosCats.forEach(function(c){t+=byBlock[b][c];}); return t; });
+        var maxV = (Math.max.apply(null, totals) || 1) * 1.18;
+        var W=900,H=300, padL=40,padR=16,padT=20,padB=40;
+        var plotW=W-padL-padR, plotH=H-padT-padB;
+        var n = blocks.length || 1;
+        var gap = 22;
+        var barW = (plotW - gap*(n-1))/n;
+
+        var ticks=4;
+        for (var t=0;t<=ticks;t++){
+          var v = maxV*t/ticks;
+          var y = padT+plotH-(v/maxV)*plotH;
+          svg.appendChild(el('line',{x1:padL,x2:W-padR,y1:y,y2:y,class:'grid-line'}));
+          var lab = el('text',{x:padL-8,y:y+3,class:'axis-label','text-anchor':'end'}); lab.textContent=Math.round(v); svg.appendChild(lab);
+        }
+        svg.appendChild(el('line',{x1:padL,x2:W-padR,y1:padT+plotH,y2:padT+plotH,class:'baseline'}));
+
+        blocks.forEach(function(b,i){
+          var x = padL + i*(barW+gap);
+          var yCursor = padT+plotH;
+          aosCats.forEach(function(c){
+            var v = byBlock[b][c];
+            if (!v) return;
+            var h = (v/maxV)*plotH;
+            var y = yCursor - h;
+            svg.appendChild(el('rect',{x:x,y:y,width:barW,height:h,fill:catColor[c]}));
+            var hit = el('rect',{x:x,y:y,width:barW,height:h,class:'hit'});
+            (function(b,c,v,x,y){
+              hit.addEventListener('mouseenter', function(){
+                var rect2 = svg.getBoundingClientRect(); var scaleX=rect2.width/W, scaleY=rect2.height/H;
+                var sx=rect2.left+(x+barW/2)*scaleX, sy=rect2.top+y*scaleY;
+                showTip(sx,sy,'<div class="tt-title">Block '+b+' &middot; '+c+'</div><div class="tt-row">'+v+' unit'+(v===1?'':'s')+'</div>');
+              });
+            })(b,c,v,x,y);
+            hit.addEventListener('mouseleave', hideTip);
+            svg.appendChild(hit);
+            yCursor = y;
+          });
+          var totLab = el('text',{x:x+barW/2,y:padT+plotH-((totals[i]/maxV)*plotH)-6,class:'bar-value','text-anchor':'middle'});
+          totLab.textContent = totals[i];
+          svg.appendChild(totLab);
+          var nameLab = el('text',{x:x+barW/2,y:padT+plotH+16,class:'axis-label','text-anchor':'middle'});
+          nameLab.textContent = 'Block '+b;
+          svg.appendChild(nameLab);
+        });
+
+        var legend = document.getElementById('crmBookingChartLegend');
+        if (legend) legend.innerHTML = aosCats.map(function(c){ return '<span><i style="background:'+catColor[c]+'"></i>'+c+'</span>'; }).join('');
+      }
+
+      var heatHost = document.getElementById('crmBookingMonthHeatmap');
+      if (heatHost){
+        var counts = {}; var years = [];
+        AOS_DATA.forEach(function(r){
+          var d = parseAosDate(r[4]);
+          if (!d) return;
+          if (!counts[d.year]){ counts[d.year] = new Array(12).fill(0); years.push(d.year); }
+          counts[d.year][d.month]++;
+        });
+        years.sort();
+        var maxV2 = 0;
+        years.forEach(function(y){ counts[y].forEach(function(v){ if (v>maxV2) maxV2=v; }); });
+        var head = '<thead><tr><th></th>'+MONTH_ABBR.map(function(m){return '<th class="num">'+m+'</th>';}).join('')+'</tr></thead>';
+        var rows = years.map(function(y){
+          return '<tr><td class="cell-primary">'+y+'</td>'+counts[y].map(function(v){
+            return '<td class="num tnum" style="background:'+crmHeatShade(v,maxV2)+';border-radius:6px;">'+(v||'—')+'</td>';
+          }).join('')+'</tr>';
+        }).join('');
+        heatHost.innerHTML = years.length ? ('<table>'+head+'<tbody>'+rows+'</tbody></table>') : '<div class="empty-state">No booking dates available.</div>';
+      }
+    }
+
+    function crmByTowerTableRender(){
+      var table = document.getElementById('crmByTowerTable');
+      if (!table) return;
+      var byBlock = {};
+      aosBlocksList.forEach(function(b){ byBlock[b] = {units:0, tsc:0, recv:0}; });
+      AOS_DATA.forEach(function(r){
+        var d = byBlock[r[0]]; if (!d) return;
+        d.units++; d.tsc += r[5]; d.recv += r[6];
+      });
+      var rows = aosBlocksList.map(function(b){
+        var d = byBlock[b];
+        var bal = d.tsc-d.recv;
+        var pct = d.tsc ? (100*d.recv/d.tsc) : 0;
+        return {b:b, d:d, bal:bal, pct:pct};
+      }).sort(function(a,c){ return c.d.tsc-a.d.tsc; });
+      var totUnits=0, totTsc=0, totRecv=0;
+      rows.forEach(function(r){ totUnits+=r.d.units; totTsc+=r.d.tsc; totRecv+=r.d.recv; });
+      var body = rows.map(function(r){
+        return '<tr><td class="cell-primary">Block '+r.b+'</td><td class="num tnum">'+r.d.units+'</td>'+
+          '<td class="num tnum">'+aosFmtInr(r.d.tsc)+'</td><td class="num tnum">'+aosFmtInr(r.d.recv)+'</td>'+
+          '<td class="num tnum">'+aosFmtInr(Math.max(0,r.bal))+'</td><td class="num tnum">'+r.pct.toFixed(1)+'%</td></tr>';
+      }).join('');
+      var totPct = totTsc ? (100*totRecv/totTsc) : 0;
+      table.innerHTML = '<thead><tr><th>Block</th><th class="num">Units</th><th class="num">TSC (AOS value)</th><th class="num">Received</th><th class="num">Balance due</th><th class="num">% collected</th></tr></thead><tbody>'+body+
+        '<tr class="total-row"><td>Total</td><td class="num tnum">'+totUnits+'</td><td class="num tnum">'+aosFmtInr(totTsc)+'</td><td class="num tnum">'+aosFmtInr(totRecv)+'</td><td class="num tnum">'+aosFmtInr(Math.max(0,totTsc-totRecv))+'</td><td class="num tnum">'+totPct.toFixed(1)+'%</td></tr></tbody>';
+    }
+
+    function crmStageHeatmapRender(){
+      var host = document.getElementById('crmStageHeatmap');
+      if (!host) return;
+      var buckets = ['0–10%','10–20%','20–30%','30–40%','40–50%','50–60%','60–70%','70–80%','80–90%','90–100%'];
+      var byBlock = {};
+      aosBlocksList.forEach(function(b){ byBlock[b] = new Array(10).fill(0); });
+      AOS_DATA.forEach(function(r){
+        var idx = Math.min(9, Math.max(0, Math.floor((r[7]||0)*10)));
+        if (byBlock[r[0]]) byBlock[r[0]][idx]++;
+      });
+      var maxV=0;
+      aosBlocksList.forEach(function(b){ byBlock[b].forEach(function(v){ if (v>maxV) maxV=v; }); });
+      var head = '<thead><tr><th>Block</th>'+buckets.map(function(b){return '<th class="num">'+b+'</th>';}).join('')+'</tr></thead>';
+      var rows = aosBlocksList.map(function(b){
+        return '<tr><td class="cell-primary">Block '+b+'</td>'+byBlock[b].map(function(v){
+          return '<td class="num tnum" style="background:'+crmHeatShade(v,maxV)+';border-radius:6px;">'+(v||'—')+'</td>';
+        }).join('')+'</tr>';
+      }).join('');
+      host.innerHTML = '<table>'+head+'<tbody>'+rows+'</tbody></table>';
+    }
+
     function crmUnitReportsRender(){
       crmUnitReportsKpis();
       crmBookingRender();
       crmCollectionRender();
+      crmBookingChartsRender();
+      crmByTowerTableRender();
+      crmStageHeatmapRender();
     }
 
     aosRecomputeAndRender();
@@ -1876,6 +2047,44 @@
     }
 
     /* ---- CRM & Sales: Monthly Collection and Overall Collection Report (shares FLOW_DATA) ---- */
+    function crmMonthlyChartRender(){
+      var svg = document.getElementById('crmMonthlyChart');
+      if (!svg) return;
+      svg.innerHTML = '';
+      var actualRows = FLOW_DATA.filter(function(r){ return r[11] === 1; });
+      if (!actualRows.length) return;
+      var W=900,H=260, padL=64,padR=16,padT=14,padB=34;
+      var plotW=W-padL-padR, plotH=H-padT-padB;
+      var maxV = (Math.max.apply(null, actualRows.map(function(r){return r[5];})) || 1) * 1.15;
+      var n = actualRows.length;
+      var gap=18;
+      var barW = (plotW-gap*(n-1))/n;
+      var ticks=4;
+      for (var t=0;t<=ticks;t++){
+        var v=maxV*t/ticks; var y=padT+plotH-(v/maxV)*plotH;
+        svg.appendChild(el('line',{x1:padL,x2:W-padR,y1:y,y2:y,class:'grid-line'}));
+        var lab=el('text',{x:padL-8,y:y+3,class:'axis-label','text-anchor':'end'}); lab.textContent=flowFmtCr(v); svg.appendChild(lab);
+      }
+      svg.appendChild(el('line',{x1:padL,x2:W-padR,y1:padT+plotH,y2:padT+plotH,class:'baseline'}));
+      actualRows.forEach(function(r,i){
+        var x = padL+i*(barW+gap);
+        var h = (r[5]/maxV)*plotH;
+        var y = padT+plotH-h;
+        svg.appendChild(el('rect',{x:x,y:y,width:barW,height:h,rx:4,fill:'var(--accent-crm)'}));
+        var hit = el('rect',{x:x,y:padT,width:barW,height:plotH,class:'hit'});
+        (function(r,x,y){
+          hit.addEventListener('mouseenter', function(){
+            var rect=svg.getBoundingClientRect(); var scaleX=rect.width/W, scaleY=rect.height/H;
+            var sx=rect.left+(x+barW/2)*scaleX, sy=rect.top+y*scaleY;
+            showTip(sx,sy,'<div class="tt-title">'+r[0]+'</div><div class="tt-row">Collected: '+flowFmtCr(r[5])+'</div>');
+          });
+        })(r,x,y);
+        hit.addEventListener('mouseleave', hideTip);
+        svg.appendChild(hit);
+        var lab2=el('text',{x:x+barW/2,y:padT+plotH+16,class:'axis-label','text-anchor':'middle'}); lab2.textContent=r[0]; svg.appendChild(lab2);
+      });
+    }
+
     function crmMonthlyRender(){
       var table = document.getElementById('crmMonthlyTable');
       var kpiRow = document.getElementById('crmMonthlyKpiRow');
@@ -1911,6 +2120,7 @@
         table.innerHTML = '<thead><tr><th>Month</th><th class="num">Existing sales</th><th class="num">Future sales</th><th class="num">Other receipts</th><th class="num">Total collection</th><th class="num">Cumulative</th></tr></thead><tbody>'+rows+
           '<tr class="total-row"><td>Total</td><td class="num tnum">'+flowFmtCr(fromExisting)+'</td><td class="num tnum">'+flowFmtCr(fromFuture)+'</td><td class="num tnum">'+flowFmtCr(otherReceipts)+'</td><td class="num tnum">'+flowFmtCr(totalCollected)+'</td><td class="num tnum">'+flowFmtCr(cum)+'</td></tr></tbody>';
       }
+      crmMonthlyChartRender();
     }
 
     flowRecomputeAndRender();
