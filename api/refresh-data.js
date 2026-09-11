@@ -216,7 +216,7 @@ function buildFlowData(range) {
 
 function round2(n) { return Math.round(n * 100) / 100; }
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   try {
     const driveId = process.env.ARIA_DRIVE_ID;
@@ -252,7 +252,5 @@ module.exports = async function handler(req, res) {
   }
 }
 
-// Exposed for local unit testing only (Vercel still uses module.exports as the handler function).
-module.exports.buildAosData = buildAosData;
-module.exports.buildFlowData = buildFlowData;
-module.exports.fmtDate = fmtDate;
+// Exposed for local unit testing only (Vercel still uses the default export as the handler function).
+export { buildAosData, buildFlowData, fmtDate };
