@@ -1,8 +1,10 @@
 import { useMemo, useState } from "react"
 
 import { Callout } from "@/components/dashboard/callout"
+import { FlowTrendChart } from "@/components/dashboard/flow-trend-chart"
 import { FunnelBar } from "@/components/dashboard/funnel-bar"
 import { KpiCard, KpiRow } from "@/components/dashboard/kpi"
+import { OutflowBreakdown } from "@/components/dashboard/outflow-breakdown"
 import { PageHead } from "@/components/dashboard/page-head"
 import { Pill } from "@/components/dashboard/pill"
 import { TableToolbar } from "@/components/dashboard/table-toolbar"
@@ -54,14 +56,15 @@ export function InflowOutflowView() {
     let deficitMonths = 0
     let actualInflow = 0
     let actualOutflow = 0
+    let actualBudgetOutflow = 0
     let lastActualIdx = 0
     FLOW_DATA.forEach((r, i) => {
       totalInflow += r[5]
       totalOutflow += r[8]
-      if (r[9] < 0) deficitMonths++
       if (r[11]) {
         actualInflow += r[5]
         actualOutflow += r[8]
+        actualBudgetOutflow += r[6]
         lastActualIdx = i
       }
     })
@@ -72,6 +75,9 @@ export function InflowOutflowView() {
       currentClosing: FLOW_DATA[lastActualIdx][9],
       currentLabel: FLOW_DATA[lastActualIdx][0],
       actualNet: actualInflow - actualOutflow,
+      actualOutflow,
+      actualBudgetOutflow,
+      actualMonthsLabel: `${FLOW_DATA[0][0]} → ${FLOW_DATA[lastActualIdx][0]}`,
     }
   }, [FLOW_DATA])
 
@@ -186,6 +192,26 @@ export function InflowOutflowView() {
         The deficit first appears around <b>Oct-2028</b> and recurs intermittently through <b>Dec-2030</b>, troughing
         near ₹191 Cr short in mid-2030. Click <b>&ldquo;Deficit months&rdquo;</b> below to see just these.
       </Callout>
+
+      <FlowTrendChart />
+
+      <Callout
+        variant={kpis.actualOutflow <= kpis.actualBudgetOutflow ? "good" : "warning"}
+        title={`Actual outflow to date (${kpis.actualMonthsLabel}): ${fmtCr(kpis.actualOutflow)} vs ${fmtCr(kpis.actualBudgetOutflow)} budgeted`}
+      >
+        Real cash outflow across the {kpis.actualMonthsLabel} actual months is{" "}
+        <b>{fmtCr(Math.abs(kpis.actualOutflow - kpis.actualBudgetOutflow))}</b>{" "}
+        {kpis.actualOutflow <= kpis.actualBudgetOutflow ? "under" : "over"} the modelled Budget Outflow for the same
+        months. This is an aggregate comparison only — the workbook&rsquo;s &ldquo;Actual Outflow related to
+        Budget&rdquo; column (which would give a category-level view) is currently blank in SharePoint; the
+        breakdown below will populate automatically once that column or a Tally actuals export is filled in.
+      </Callout>
+
+      <OutflowBreakdown />
+
+      <div className="mb-2.5 px-0.5 text-[11.5px] font-semibold tracking-[0.06em] text-muted-foreground uppercase">
+        Modelled monthly cash flow
+      </div>
 
       <div className="mb-4 overflow-hidden rounded-[14px] border border-border bg-card shadow-card">
         <div className="flex flex-wrap items-center gap-2.5 border-b border-border px-[18px] py-3">
