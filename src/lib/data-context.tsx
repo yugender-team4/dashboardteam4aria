@@ -51,10 +51,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [refreshError, setRefreshError] = useState<string | null>(null)
   const [lastGood, setLastGood] = useState<string | null>(() => readLastGood())
 
-  const aosCats = useMemo(() => Array.from(new Set(aosData.map((r) => r[2]))).sort(), [aosData])
-  const aosBlocksList = useMemo(() => Array.from(new Set(aosData.map((r) => r[0]))).sort(), [aosData])
+  const aosCats = useMemo(
+    () => Array.from(new Set(aosData.map((r) => r[2]))).filter(Boolean).sort(),
+    [aosData]
+  )
+  const aosBlocksList = useMemo(
+    () => Array.from(new Set(aosData.map((r) => r[0]))).filter(Boolean).sort(),
+    [aosData]
+  )
   const flowYears = useMemo(
-    () => Array.from(new Set(flowData.map((r) => `20${r[0].split("-")[1]}`))).sort(),
+    () =>
+      Array.from(new Set(flowData.filter((r) => r[0]).map((r) => `20${r[0].split("-")[1]}`)))
+        .filter(Boolean)
+        .sort(),
     [flowData]
   )
 
