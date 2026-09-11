@@ -419,12 +419,12 @@
         </div>
       </section>
 
-      <!-- ================= CRM ================= -->
+      <!-- ================= CRM & SALES ================= -->
       <section class="view" id="view-crm">
         <div class="page-head">
           <div>
-            <div class="eyebrow"><span class="swatch" style="background:var(--accent-crm)"></span>CRM · Sales &amp; collections</div>
-            <h1>Bookings, execution &amp; channel partners</h1>
+            <div class="eyebrow"><span class="swatch" style="background:var(--accent-crm)"></span>CRM &amp; Sales</div>
+            <h1>Bookings, collections &amp; sales performance</h1>
             <div class="desc">811 flats booked across five sale categories, sourced through 81 channel partners and direct sales.</div>
           </div>
         </div>
@@ -437,27 +437,106 @@
           <div class="kpi"><div class="label">CANCELLATIONS</div><div class="value tnum">137</div><div class="sub">59 re-booked (43%)</div></div>
         </div>
 
-        <div class="card">
-          <div class="card-head"><div><h2>Bookings by category</h2><div class="hint">Flats, value, collections and AOS execution</div></div></div>
-          <div class="card-body tight"><div class="table-wrap"><table id="categoryTable"></table></div></div>
-        </div>
-
-        <div class="grid-2">
-          <div class="card">
-            <div class="card-head"><div><h2>AOS execution progress</h2><div class="hint">Signed &amp; registered vs. pending, by category</div></div></div>
-            <div class="card-body" id="aosProgress"></div>
-          </div>
-          <div class="card">
-            <div class="card-head"><div><h2>EOI / After-EOI — below vs. above milestone block</h2><div class="hint">% of block payment (20% A–D · 36% E–F) collected</div></div></div>
-            <div class="card-body tight"><div class="table-wrap"><table id="milestoneSplitTable"></table></div></div>
+        <div class="card" style="margin-bottom:14px;">
+          <div class="filter-bar" style="border-bottom:none;">
+            <div class="seg" id="crmModuleSeg"></div>
+            <div class="filter-spacer"></div>
+            <select id="crmReportSelect"></select>
+            <select id="salesReportSelect" hidden></select>
           </div>
         </div>
 
-        <div class="card">
-          <div class="card-head">
-            <div><h2>Top channel partners</h2><div class="hint">By AOS value sourced, of 81 active partners</div></div>
+        <!-- ===== CRM sub-module ===== -->
+        <div id="crmPanel">
+
+          <div id="crmReport-booking">
+            <div class="kpi-row" id="crmBookingKpiRow"></div>
+            <div class="card" style="margin-bottom:0;">
+              <div class="filter-bar">
+                <div class="search-box">
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5.2" stroke="currentColor" stroke-width="1.5"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                  <input type="text" id="crmBookingSearch" placeholder="Search customer, flat no. or CP…">
+                </div>
+                <select id="crmBookingCatSelect"></select>
+                <select id="crmBookingBlockSelect"></select>
+                <div class="filter-spacer"></div>
+                <span class="count-chip tnum" id="crmBookingCountChip"></span>
+                <button class="reset-btn" id="crmBookingResetBtn">Reset filters</button>
+              </div>
+              <div class="table-scroll">
+                <table id="crmBookingTable">
+                  <thead><tr id="crmBookingHeadRow"></tr></thead>
+                  <tbody id="crmBookingBodyRows"></tbody>
+                </table>
+                <div class="empty-state" id="crmBookingEmptyState" hidden>No units match these filters.</div>
+              </div>
+            </div>
           </div>
-          <div class="card-body tight"><div class="table-wrap"><table id="cpTable"></table></div></div>
+
+          <div id="crmReport-collection" hidden>
+            <div class="kpi-row" id="crmCollectionKpiRow"></div>
+            <div class="card" style="margin-bottom:0;">
+              <div class="filter-bar">
+                <div class="search-box">
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5.2" stroke="currentColor" stroke-width="1.5"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                  <input type="text" id="crmCollectionSearch" placeholder="Search customer, flat no. or CP…">
+                </div>
+                <select id="crmCollectionCatSelect"></select>
+                <select id="crmCollectionBlockSelect"></select>
+                <div class="filter-spacer"></div>
+                <span class="count-chip tnum" id="crmCollectionCountChip"></span>
+                <button class="reset-btn" id="crmCollectionResetBtn">Reset filters</button>
+              </div>
+              <div class="table-scroll">
+                <table id="crmCollectionTable">
+                  <thead><tr id="crmCollectionHeadRow"></tr></thead>
+                  <tbody id="crmCollectionBodyRows"></tbody>
+                </table>
+                <div class="empty-state" id="crmCollectionEmptyState" hidden>No units match these filters.</div>
+              </div>
+            </div>
+          </div>
+
+          <div id="crmReport-monthly" hidden>
+            <div class="kpi-row" id="crmMonthlyKpiRow"></div>
+            <div class="card">
+              <div class="card-head"><div><h2>Monthly collection</h2><div class="hint">Actual bank collections, month by month (from the Inflow &amp; Outflow model)</div></div></div>
+              <div class="card-body tight"><div class="table-wrap"><table id="crmMonthlyTable"></table></div></div>
+            </div>
+          </div>
+
+          <div id="crmReport-present" hidden>
+            <div class="kpi-row">
+              <div class="kpi"><div class="label">AMOUNT RECEIVED</div><div class="value tnum">₹363.47 Cr</div><div class="sub">39.0% of AOS value</div></div>
+              <div class="kpi"><div class="label">AMOUNT CALLED</div><div class="value tnum">₹481.99 Cr</div><div class="sub">invoiced to date</div></div>
+              <div class="kpi"><div class="label">DUE &amp; OUTSTANDING</div><div class="value tnum">₹120.26 Cr</div><div class="sub">of amount called</div></div>
+              <div class="kpi"><div class="label">FUTURE RECEIVABLE</div><div class="value tnum">₹568.68 Cr</div><div class="sub">over life of project</div></div>
+            </div>
+            <div class="card">
+              <div class="card-head"><div><h2>Bookings by category</h2><div class="hint">Present collection &amp; receivable, by category</div></div></div>
+              <div class="card-body tight"><div class="table-wrap"><table id="categoryTable"></table></div></div>
+            </div>
+            <div class="card">
+              <div class="card-head"><div><h2>EOI / After-EOI — below vs. above milestone block</h2><div class="hint">% of block payment (20% A–D · 36% E–F) collected</div></div></div>
+              <div class="card-body tight"><div class="table-wrap"><table id="milestoneSplitTable"></table></div></div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ===== Sales sub-module ===== -->
+        <div id="salesPanel" hidden>
+          <div class="card">
+            <div class="card-head"><div><h2>Top channel partners</h2><div class="hint">By AOS value sourced, of 81 active partners</div></div></div>
+            <div class="card-body tight"><div class="table-wrap"><table id="cpTable"></table></div></div>
+          </div>
+          <div class="callout">
+            <div class="ic">🛠️</div>
+            <div>
+              <div class="tt">More Sales reports coming soon</div>
+              <div class="bd">This module will grow with the reports you'd like next — just let us know what to add.</div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -701,6 +780,49 @@
     document.getElementById('sidebar').classList.toggle('open');
   });
 
+  /* ---------------- CRM & Sales: CRM / Sales tab + report switcher ---------------- */
+  (function(){
+    var crmModuleSeg = document.getElementById('crmModuleSeg');
+    var crmPanel = document.getElementById('crmPanel');
+    var salesPanel = document.getElementById('salesPanel');
+    var crmReportSelect = document.getElementById('crmReportSelect');
+    var salesReportSelect = document.getElementById('salesReportSelect');
+    if (!crmModuleSeg) return;
+
+    var modules = [['crm','CRM'],['sales','Sales']];
+    crmModuleSeg.innerHTML = modules.map(function(m,i){ return '<button data-v="'+m[0]+'" class="'+(i===0?'active':'')+'">'+m[1]+'</button>'; }).join('');
+    crmModuleSeg.querySelectorAll('button').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        crmModuleSeg.querySelectorAll('button').forEach(function(b){ b.classList.remove('active'); });
+        btn.classList.add('active');
+        var v = btn.dataset.v;
+        crmPanel.hidden = v !== 'crm';
+        salesPanel.hidden = v !== 'sales';
+        crmReportSelect.hidden = v !== 'crm';
+        salesReportSelect.hidden = v !== 'sales';
+      });
+    });
+
+    var crmReports = [
+      ['booking','Unit Booking Report'],
+      ['collection','Unit Collection Report'],
+      ['monthly','Monthly Collection and Overall Collection Report'],
+      ['present','Present Collection and Receivable']
+    ];
+    crmReportSelect.innerHTML = crmReports.map(function(r){ return '<option value="'+r[0]+'">'+r[1]+'</option>'; }).join('');
+    crmReportSelect.addEventListener('change', function(){
+      var v = this.value;
+      ['booking','collection','monthly','present'].forEach(function(name){
+        var elx = document.getElementById('crmReport-'+name);
+        if (elx) elx.hidden = (name !== v);
+      });
+    });
+
+    var salesReports = [['cp','Top channel partners']];
+    salesReportSelect.innerHTML = salesReports.map(function(r){ return '<option value="'+r[0]+'">'+r[1]+'</option>'; }).join('') +
+      '<option value="more" disabled>More reports — coming soon</option>';
+  })();
+
   /* ---------------- tooltip helper ---------------- */
   var tooltip = document.getElementById('tooltip');
   function showTip(x,y,html){ tooltip.innerHTML = html; tooltip.style.left=x+'px'; tooltip.style.top=y+'px'; tooltip.classList.add('show'); }
@@ -827,9 +949,11 @@
       '<tr class="total-row"><td>Total due immediate</td><td class="num tnum">₹121.79 Cr</td></tr></tbody>';
   })();
 
-  /* AOS execution progress bars (CRM) */
+  /* AOS execution progress bars — superseded by the dedicated AOS Tracker tab;
+     kept as a no-op guard in case #aosProgress is ever reintroduced. */
   (function(){
     var wrap = document.getElementById('aosProgress');
+    if (!wrap) return;
     wrap.innerHTML = categories.map(function(c){
       var pct = Math.round(1000*c.exec/(c.exec+c.pend))/10;
       return '<div style="margin-bottom:13px;">'+
@@ -1191,7 +1315,200 @@
       aosRender();
     }
 
+    /* ---- CRM & Sales: Unit Booking Report / Unit Collection Report (share AOS_DATA) ---- */
+    var crmBookingState = { search:'', cat:'all', block:'all', sortKey:null, sortDir:1 };
+    var crmCollectionState = { search:'', cat:'all', block:'all', sortKey:null, sortDir:1 };
+
+    var crmBookingCatSel = document.getElementById('crmBookingCatSelect');
+    var crmBookingBlkSel = document.getElementById('crmBookingBlockSelect');
+    var crmCollectionCatSel = document.getElementById('crmCollectionCatSelect');
+    var crmCollectionBlkSel = document.getElementById('crmCollectionBlockSelect');
+
+    function crmFillFilterSelects(){
+      var catOpts = '<option value="all">All categories</option>' + aosCats.map(function(c){return '<option value="'+c+'">'+c+'</option>';}).join('');
+      var blkOpts = '<option value="all">All blocks</option>' + aosBlocksList.map(function(b){return '<option value="'+b+'">Block '+b+'</option>';}).join('');
+      if (crmBookingCatSel){ crmBookingCatSel.innerHTML = catOpts; crmBookingCatSel.value='all'; }
+      if (crmBookingBlkSel){ crmBookingBlkSel.innerHTML = blkOpts; crmBookingBlkSel.value='all'; }
+      if (crmCollectionCatSel){ crmCollectionCatSel.innerHTML = catOpts; crmCollectionCatSel.value='all'; }
+      if (crmCollectionBlkSel){ crmCollectionBlkSel.innerHTML = blkOpts; crmCollectionBlkSel.value='all'; }
+    }
+    crmFillFilterSelects();
+
+    if (crmBookingCatSel) crmBookingCatSel.addEventListener('change', function(){ crmBookingState.cat=this.value; crmBookingRender(); });
+    if (crmBookingBlkSel) crmBookingBlkSel.addEventListener('change', function(){ crmBookingState.block=this.value; crmBookingRender(); });
+    var crmBookingSearchInput = document.getElementById('crmBookingSearch');
+    if (crmBookingSearchInput) crmBookingSearchInput.addEventListener('input', function(){ crmBookingState.search=this.value.trim().toLowerCase(); crmBookingRender(); });
+    var crmBookingResetBtn = document.getElementById('crmBookingResetBtn');
+    if (crmBookingResetBtn) crmBookingResetBtn.addEventListener('click', function(){
+      crmBookingState = { search:'', cat:'all', block:'all', sortKey:null, sortDir:1 };
+      if (crmBookingSearchInput) crmBookingSearchInput.value='';
+      if (crmBookingCatSel) crmBookingCatSel.value='all';
+      if (crmBookingBlkSel) crmBookingBlkSel.value='all';
+      crmBookingRender();
+    });
+
+    if (crmCollectionCatSel) crmCollectionCatSel.addEventListener('change', function(){ crmCollectionState.cat=this.value; crmCollectionRender(); });
+    if (crmCollectionBlkSel) crmCollectionBlkSel.addEventListener('change', function(){ crmCollectionState.block=this.value; crmCollectionRender(); });
+    var crmCollectionSearchInput = document.getElementById('crmCollectionSearch');
+    if (crmCollectionSearchInput) crmCollectionSearchInput.addEventListener('input', function(){ crmCollectionState.search=this.value.trim().toLowerCase(); crmCollectionRender(); });
+    var crmCollectionResetBtn = document.getElementById('crmCollectionResetBtn');
+    if (crmCollectionResetBtn) crmCollectionResetBtn.addEventListener('click', function(){
+      crmCollectionState = { search:'', cat:'all', block:'all', sortKey:null, sortDir:1 };
+      if (crmCollectionSearchInput) crmCollectionSearchInput.value='';
+      if (crmCollectionCatSel) crmCollectionCatSel.value='all';
+      if (crmCollectionBlkSel) crmCollectionBlkSel.value='all';
+      crmCollectionRender();
+    });
+
+    function crmMatches(state, r){
+      if (state.cat !== 'all' && r[2] !== state.cat) return false;
+      if (state.block !== 'all' && r[0] !== state.block) return false;
+      if (state.search){
+        var hay = (r[3]+' '+r[1]+' '+r[8]).toLowerCase();
+        if (hay.indexOf(state.search) === -1) return false;
+      }
+      return true;
+    }
+
+    var crmBookingCols = [
+      {k:0,label:'Block'},{k:1,label:'Flat No.'},{k:2,label:'Category'},
+      {k:3,label:'Customer',wrap:true},{k:5,label:'AOS Value',num:true},{k:8,label:'CP / Source',wrap:true}
+    ];
+    var crmBookingHeadRow = document.getElementById('crmBookingHeadRow');
+    if (crmBookingHeadRow){
+      crmBookingHeadRow.innerHTML = crmBookingCols.map(function(c){
+        return '<th class="'+(c.num?'num':'')+'" data-k="'+c.k+'">'+c.label+'<span class="arrow">▾</span></th>';
+      }).join('');
+      crmBookingHeadRow.querySelectorAll('th').forEach(function(th){
+        th.addEventListener('click', function(){
+          var k = parseInt(th.dataset.k,10);
+          if (crmBookingState.sortKey === k) crmBookingState.sortDir *= -1; else { crmBookingState.sortKey = k; crmBookingState.sortDir = 1; }
+          crmBookingRender();
+        });
+      });
+    }
+
+    var crmBookingBodyRows = document.getElementById('crmBookingBodyRows');
+    var crmBookingCountChip = document.getElementById('crmBookingCountChip');
+    var crmBookingEmptyState = document.getElementById('crmBookingEmptyState');
+
+    function crmBookingRender(){
+      if (!crmBookingBodyRows) return;
+      var filtered = AOS_DATA.filter(function(r){ return crmMatches(crmBookingState, r); });
+      if (crmBookingState.sortKey !== null){
+        var k = crmBookingState.sortKey, dir = crmBookingState.sortDir;
+        filtered = filtered.slice().sort(function(a,b){
+          var va=a[k], vb=b[k];
+          if (typeof va === 'string'){ va=va.toLowerCase(); vb=vb.toLowerCase(); }
+          if (va<vb) return -1*dir; if (va>vb) return 1*dir; return 0;
+        });
+      }
+      if (crmBookingCountChip) crmBookingCountChip.textContent = 'Showing ' + filtered.length + ' of ' + AOS_DATA.length + ' units';
+      if (crmBookingEmptyState) crmBookingEmptyState.hidden = filtered.length !== 0;
+      crmBookingBodyRows.innerHTML = filtered.map(function(r){
+        return '<tr>'+
+          '<td>'+r[0]+'</td>'+
+          '<td class="cell-primary">'+r[1]+'</td>'+
+          '<td>'+r[2]+'</td>'+
+          '<td class="wrap">'+(r[3]||'—')+'<div class="cell-sub">Booked '+(r[4]||'—')+'</div></td>'+
+          '<td class="num tnum">'+aosFmtInr(r[5])+'</td>'+
+          '<td class="wrap cell-sub">'+(r[8]||'Direct')+'</td>'+
+        '</tr>';
+      }).join('');
+    }
+
+    var crmCollectionCols = [
+      {k:0,label:'Block'},{k:1,label:'Flat No.'},{k:2,label:'Category'},
+      {k:3,label:'Customer',wrap:true},{k:5,label:'AOS Value',num:true},
+      {k:6,label:'Received',num:true},{k:7,label:'% Collected',num:true},{k:'balance',label:'Balance due',num:true}
+    ];
+    var crmCollectionHeadRow = document.getElementById('crmCollectionHeadRow');
+    if (crmCollectionHeadRow){
+      crmCollectionHeadRow.innerHTML = crmCollectionCols.map(function(c){
+        return '<th class="'+(c.num?'num':'')+'" data-k="'+c.k+'">'+c.label+'<span class="arrow">▾</span></th>';
+      }).join('');
+      crmCollectionHeadRow.querySelectorAll('th').forEach(function(th){
+        th.addEventListener('click', function(){
+          var k = th.dataset.k === 'balance' ? 'balance' : parseInt(th.dataset.k,10);
+          if (crmCollectionState.sortKey === k) crmCollectionState.sortDir *= -1; else { crmCollectionState.sortKey = k; crmCollectionState.sortDir = 1; }
+          crmCollectionRender();
+        });
+      });
+    }
+
+    var crmCollectionBodyRows = document.getElementById('crmCollectionBodyRows');
+    var crmCollectionCountChip = document.getElementById('crmCollectionCountChip');
+    var crmCollectionEmptyState = document.getElementById('crmCollectionEmptyState');
+
+    function crmCollectionRender(){
+      if (!crmCollectionBodyRows) return;
+      var filtered = AOS_DATA.filter(function(r){ return crmMatches(crmCollectionState, r); }).slice();
+      var state = crmCollectionState;
+      if (state.sortKey !== null){
+        var k = state.sortKey, dir = state.sortDir;
+        filtered.sort(function(a,b){
+          var va = k==='balance' ? (a[5]-a[6]) : a[k];
+          var vb = k==='balance' ? (b[5]-b[6]) : b[k];
+          if (typeof va === 'string'){ va=va.toLowerCase(); vb=vb.toLowerCase(); }
+          if (va<vb) return -1*dir; if (va>vb) return 1*dir; return 0;
+        });
+      }
+      if (crmCollectionCountChip) crmCollectionCountChip.textContent = 'Showing ' + filtered.length + ' of ' + AOS_DATA.length + ' units';
+      if (crmCollectionEmptyState) crmCollectionEmptyState.hidden = filtered.length !== 0;
+      crmCollectionBodyRows.innerHTML = filtered.map(function(r){
+        var balance = r[5]-r[6];
+        return '<tr>'+
+          '<td>'+r[0]+'</td>'+
+          '<td class="cell-primary">'+r[1]+'</td>'+
+          '<td>'+r[2]+'</td>'+
+          '<td class="wrap">'+(r[3]||'—')+'</td>'+
+          '<td class="num tnum">'+aosFmtInr(r[5])+'</td>'+
+          '<td class="num tnum">'+aosFmtInr(r[6])+'</td>'+
+          '<td class="num tnum">'+Math.round(r[7]*100)+'%</td>'+
+          '<td class="num tnum">'+aosFmtInr(Math.max(0,balance))+'</td>'+
+        '</tr>';
+      }).join('');
+    }
+
+    function crmUnitReportsKpis(){
+      var totalUnits = AOS_DATA.length;
+      var totalValue = 0, totalReceived = 0;
+      AOS_DATA.forEach(function(r){ totalValue += r[5]; totalReceived += r[6]; });
+      var avgValue = totalUnits ? totalValue/totalUnits : 0;
+
+      var bookingKpiRow = document.getElementById('crmBookingKpiRow');
+      if (bookingKpiRow){
+        bookingKpiRow.innerHTML = [
+          {label:'TOTAL UNITS BOOKED', value:totalUnits, sub:'all sale categories'},
+          {label:'TOTAL AOS VALUE', value:aosFmtInr(totalValue), sub:'booked to date'},
+          {label:'AVG. UNIT VALUE', value:aosFmtInr(avgValue), sub:'per booked unit'},
+          {label:'SALE CATEGORIES', value:aosCats.length, sub:aosBlocksList.length+' blocks covered'}
+        ].map(function(d){
+          return '<div class="kpi"><div class="label">'+d.label+'</div><div class="value tnum">'+d.value+'</div><div class="sub">'+d.sub+'</div></div>';
+        }).join('');
+      }
+
+      var collectionKpiRow = document.getElementById('crmCollectionKpiRow');
+      if (collectionKpiRow){
+        var pct = totalValue ? (100*totalReceived/totalValue) : 0;
+        collectionKpiRow.innerHTML = [
+          {label:'TOTAL AOS VALUE', value:aosFmtInr(totalValue), sub:'across '+totalUnits+' units'},
+          {label:'TOTAL RECEIVED', value:aosFmtInr(totalReceived), sub:pct.toFixed(1)+'% collected'},
+          {label:'BALANCE DUE', value:aosFmtInr(Math.max(0,totalValue-totalReceived)), sub:'across booked units'}
+        ].map(function(d){
+          return '<div class="kpi"><div class="label">'+d.label+'</div><div class="value tnum">'+d.value+'</div><div class="sub">'+d.sub+'</div></div>';
+        }).join('');
+      }
+    }
+
+    function crmUnitReportsRender(){
+      crmUnitReportsKpis();
+      crmBookingRender();
+      crmCollectionRender();
+    }
+
     aosRecomputeAndRender();
+    crmUnitReportsRender();
 
     window.__ariaRefresh = window.__ariaRefresh || {};
     window.__ariaRefresh.setAosData = function(newData){
@@ -1203,6 +1520,12 @@
       aosBlkSel.innerHTML = '<option value="all">All blocks</option>' + aosBlocksList.map(function(b){return '<option value="'+b+'">Block '+b+'</option>';}).join('');
       aosBlkSel.value = 'all'; aosState.block = 'all';
       aosRecomputeAndRender();
+      crmFillFilterSelects();
+      crmBookingState = { search:'', cat:'all', block:'all', sortKey:crmBookingState.sortKey, sortDir:crmBookingState.sortDir };
+      crmCollectionState = { search:'', cat:'all', block:'all', sortKey:crmCollectionState.sortKey, sortDir:crmCollectionState.sortDir };
+      if (crmBookingSearchInput) crmBookingSearchInput.value='';
+      if (crmCollectionSearchInput) crmCollectionSearchInput.value='';
+      crmUnitReportsRender();
     };
   })();
 
@@ -1552,7 +1875,46 @@
       flowRender();
     }
 
+    /* ---- CRM & Sales: Monthly Collection and Overall Collection Report (shares FLOW_DATA) ---- */
+    function crmMonthlyRender(){
+      var table = document.getElementById('crmMonthlyTable');
+      var kpiRow = document.getElementById('crmMonthlyKpiRow');
+      if (!table && !kpiRow) return;
+      var actualRows = FLOW_DATA.filter(function(r){ return r[11] === 1; });
+
+      var totalCollected = 0, fromExisting = 0, fromFuture = 0, otherReceipts = 0;
+      actualRows.forEach(function(r){ totalCollected += r[5]; fromExisting += r[2]; fromFuture += r[3]; otherReceipts += r[4]; });
+      var avgMonthly = actualRows.length ? totalCollected/actualRows.length : 0;
+
+      if (kpiRow){
+        kpiRow.innerHTML = [
+          {label:'TOTAL COLLECTED TO DATE', value:flowFmtCr(totalCollected), sub:actualRows.length+' months of actuals'},
+          {label:'FROM EXISTING SALES', value:flowFmtCr(fromExisting), sub:'bookings already made'},
+          {label:'OTHER RECEIPTS', value:flowFmtCr(otherReceipts), sub:'non-sales inflows'},
+          {label:'AVG. MONTHLY COLLECTION', value:flowFmtCr(avgMonthly), sub:'per actual month'}
+        ].map(function(d){
+          return '<div class="kpi"><div class="label">'+d.label+'</div><div class="value tnum">'+d.value+'</div><div class="sub">'+d.sub+'</div></div>';
+        }).join('');
+      }
+
+      if (table){
+        var cum = 0;
+        var rows = actualRows.map(function(r){
+          cum += r[5];
+          return '<tr><td class="cell-primary">'+r[0]+'</td>'+
+            '<td class="num tnum">'+flowFmtCr(r[2])+'</td>'+
+            '<td class="num tnum">'+flowFmtCr(r[3])+'</td>'+
+            '<td class="num tnum">'+flowFmtCr(r[4])+'</td>'+
+            '<td class="num tnum">'+flowFmtCr(r[5])+'</td>'+
+            '<td class="num tnum">'+flowFmtCr(cum)+'</td></tr>';
+        }).join('');
+        table.innerHTML = '<thead><tr><th>Month</th><th class="num">Existing sales</th><th class="num">Future sales</th><th class="num">Other receipts</th><th class="num">Total collection</th><th class="num">Cumulative</th></tr></thead><tbody>'+rows+
+          '<tr class="total-row"><td>Total</td><td class="num tnum">'+flowFmtCr(fromExisting)+'</td><td class="num tnum">'+flowFmtCr(fromFuture)+'</td><td class="num tnum">'+flowFmtCr(otherReceipts)+'</td><td class="num tnum">'+flowFmtCr(totalCollected)+'</td><td class="num tnum">'+flowFmtCr(cum)+'</td></tr></tbody>';
+      }
+    }
+
     flowRecomputeAndRender();
+    crmMonthlyRender();
 
     window.__ariaRefresh = window.__ariaRefresh || {};
     window.__ariaRefresh.setFlowData = function(newData){
@@ -1561,6 +1923,7 @@
       flowYearSel.innerHTML = '<option value="all">All years</option>' + flowYears.map(function(y){return '<option value="'+y+'">'+y+'</option>';}).join('');
       flowYearSel.value = 'all'; flowState.year = 'all';
       flowRecomputeAndRender();
+      crmMonthlyRender();
     };
   })();
 
