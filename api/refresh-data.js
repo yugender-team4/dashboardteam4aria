@@ -12,6 +12,7 @@
 //   ARIA_INFLOW_ITEM_ID      e.g. CF15EAE3-0340-464B-9C59-B4EAAE6DAE1E  (Inflow workbook)
 
 const GRAPH = 'https://graph.microsoft.com/v1.0';
+
 async function getAccessToken() {
   const tenantId = process.env.AZURE_TENANT_ID;
   const clientId = process.env.AZURE_CLIENT_ID;
@@ -33,6 +34,7 @@ async function getAccessToken() {
   if (!resp.ok) throw httpError(502, 'auth_failed', json.error_description || JSON.stringify(json));
   return json.access_token;
 }
+
 function httpError(status, code, message) {
   const e = new Error(message);
   e.status = status;
@@ -64,6 +66,7 @@ function str(v) {
   if (typeof v === 'number' && v === 0) return '';
   return String(v).trim();
 }
+
 // Excel serial date -> "05-Jun-26" (matches the format already baked into the dashboard)
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function fmtDate(cellValue, cellText) {
@@ -81,6 +84,7 @@ function fmtDate(cellValue, cellText) {
   const yy = String(d.getUTCFullYear()).slice(-2);
   return `${dd}-${mon}-${yy}`;
 }
+
 /*
  * AOS Tracker row derivation — reverse-engineered from the Statement sheet
  * and validated against all 811 previously-baked rows with zero mismatches:
@@ -112,6 +116,7 @@ const COL = {
   REMARKS: 36,      // AL
   REMARKS2: 37       // AM
 };
+
 function buildAosData(range) {
   const values = range.values || [];
   const texts = range.text || [];
@@ -149,6 +154,7 @@ function buildAosData(range) {
   }
   return out;
 }
+
 /*
  * Inflow & Outflow (FLOW_DATA) — read directly from the Inflow workbook's
  * own computed cells (Summary!A4:J62). Every figure here is Excel's own
@@ -201,6 +207,7 @@ function buildFlowData(range) {
 }
 
 function round2(n) { return Math.round(n * 100) / 100; }
+
 module.exports = async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   try {
